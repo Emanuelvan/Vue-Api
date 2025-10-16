@@ -1,2 +1,2 @@
 # Vue-Api
-Mix of Vue.js and a pokemon API
+Mix of Vue.js and RAWG.io API
