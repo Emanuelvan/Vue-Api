@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pokédex con Vue.js</title>
+    <!-- Tailwind CSS para un diseño moderno y responsivo -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Vue.js v2 -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <style>
+        /* Estilos personalizados para un mejor aspecto */
+        body {
+            background-color: #1a202c; /* Fondo oscuro */
+            color: #e2e8f0; /* Texto claro */
+            font-family: 'Inter', sans-serif;
+        }
+        .card {
+            background-color: #2d3748;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 1px solid #4a5568;
+        }
+        .card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 10px 15px -3px rgba(251, 191, 36, 0.1), 0 4px 6px -2px rgba(251, 191, 36, 0.08);
+        }
+        .card-image-bg {
+            background-color: #4a5568;
+        }
+        .type-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: white;
+            text-transform: capitalize;
+        }
+        /* Colores para cada tipo de Pokémon */
+        .type-normal { background-color: #A8A77A; }
+        .type-fire { background-color: #EE8130; }
+        .type-water { background-color: #6390F0; }
+        .type-electric { background-color: #F7D02C; }
+        .type-grass { background-color: #7AC74C; }
+        .type-ice { background-color: #96D9D6; }
+        .type-fighting { background-color: #C22E28; }
+        .type-poison { background-color: #A33EA1; }
+        .type-ground { background-color: #E2BF65; }
+        .type-flying { background-color: #A98FF3; }
+        .type-psychic { background-color: #F95587; }
+        .type-bug { background-color: #A6B91A; }
+        .type-rock { background-color: #B6A136; }
+        .type-ghost { background-color: #735797; }
+        .type-dragon { background-color: #6F35FC; }
+        .type-dark { background-color: #705746; }
+        .type-steel { background-color: #B7B7CE; }
+        .type-fairy { background-color: #D685AD; }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div id="app" class="container mx-auto px-4 py-8">
+        
+        <header class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-bold text-yellow-400 mb-2">Mi Pokédex</h1>
+            <p class="text-lg text-gray-400">Descubriendo el mundo de Pokémon con Vue.js</p>
+        </header>
+
+        <!-- Mensaje de carga mientras se obtienen los datos -->
+        <div v-if="loading" class="text-center">
+            <p class="text-2xl text-gray-400">Buscando Pokémon...</p>
+        </div>
+
+        <!-- Contenedor de la Pokédex -->
+        <main v-else class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            
+            <!-- Tarjeta de Pokémon (se repite por cada Pokémon) -->
+            <div v-for="pokemon in pokemons" :key="pokemon.id" class="card rounded-lg overflow-hidden shadow-lg flex flex-col text-center">
+                <div class="card-image-bg p-4">
+                     <img :src="pokemon.sprites.front_default" :alt="'Imagen de ' + pokemon.name" class="w-32 h-32 mx-auto">
+                </div>
+                
+                <div class="p-5 flex-grow flex flex-col justify-between">
+                    <div>
+                        <p class="font-bold text-gray-400 mb-1">Nº {{ formatId(pokemon.id) }}</p>
+                        <h2 class="text-2xl font-bold mb-3 text-white">{{ capitalize(pokemon.name) }}</h2>
+                        
+                        <!-- Insignias de tipo -->
+                        <div class="flex justify-center gap-2">
+                             <span v-for="typeInfo in pokemon.types" :key="typeInfo.type.name"
+                                  class="type-badge" :class="'type-' + typeInfo.type.name">
+                                {{ typeInfo.type.name }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+        
+        <!-- Controles de paginación -->
+        <footer v-if="!loading && !error" class="flex justify-center items-center mt-12 gap-4">
+            <button @click="prevPage" :disabled="offset === 0" 
+                    class="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-2 px-4 rounded-lg transition disabled:bg-gray-600 disabled:cursor-not-allowed">
+                Anterior
+            </button>
+            <span class="text-lg text-gray-300 font-semibold">Página {{ currentPage }}</span>
+            <button @click="nextPage" :disabled="offset + limit >= totalPokemons"
+                    class="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-2 px-4 rounded-lg transition disabled:bg-gray-600 disabled:cursor-not-allowed">
+                Siguiente
+            </button>
+        </footer>
+
+
+        <!-- Mensaje de error si la API falla -->
+        <div v-if="error" class="text-center mt-8 p-4 bg-red-900 text-red-200 rounded-lg">
+            <p><strong>¡Oh, no!</strong> No se pudieron cargar los datos. Por favor, intenta de nuevo más tarde.</p>
+        </div>
+
+    </div>
+
+    <script>
+        // Instancia de Vue
+        new Vue({
+            el: '#app',
+            data: {
+                pokemons: [],
+                loading: true,
+                error: false,
+                limit: 20,          // Pokémon por página
+                offset: 0,          // Desplazamiento para la paginación
+                totalPokemons: 0    // Total de Pokémon en la API
+            },
+            computed: {
+                // Calcula el número de página actual basado en el offset
+                currentPage() {
+                    return Math.floor(this.offset / this.limit) + 1;
+                }
+            },
+            mounted() {
+                this.fetchPokemons();
+            },
+            methods: {
+                // Método principal para obtener los Pokémon
+                fetchPokemons() {
+                    this.loading = true;
+                    this.error = false;
+                    
+                    // Se usan 'limit' y 'offset' para la paginación
+                    fetch(`https://pokeapi.co/api/v2/pokemon?limit=${this.limit}&offset=${this.offset}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            this.totalPokemons = data.count; // Guardamos el total para deshabilitar el botón 'Siguiente'
+                            const detailPromises = data.results.map(pokemon => 
+                                fetch(pokemon.url).then(res => res.json())
+                            );
+                            
+                            return Promise.all(detailPromises);
+                        })
+                        .then(pokemonDetails => {
+                            this.pokemons = pokemonDetails;
+                            this.loading = false;
+                            window.scrollTo(0, 0); // Vuelve al inicio de la página al cargar nuevos Pokémon
+                        })
+                        .catch(error => {
+                            console.error('Hubo un problema con la operación fetch:', error);
+                            this.loading = false;
+                            this.error = true;
+                        });
+                },
+                // Navega a la siguiente página
+                nextPage() {
+                    if (this.offset + this.limit < this.totalPokemons) {
+                        this.offset += this.limit;
+                        this.fetchPokemons();
+                    }
+                },
+                // Navega a la página anterior
+                prevPage() {
+                    if (this.offset > 0) {
+                        this.offset -= this.limit;
+                        // Asegurarse de que el offset no sea negativo
+                        if (this.offset < 0) this.offset = 0;
+                        this.fetchPokemons();
+                    }
+                },
+                // Método para poner en mayúscula la primera letra
+                capitalize(name) {
+                    return name.charAt(0).toUpperCase() + name.slice(1);
+                },
+                // Método para formatear el ID del Pokémon (ej. 1 -> 001)
+                formatId(id) {
+                    return id.toString().padStart(3, '0');
+                }
+            }
+        });
+    </script>
+
+</body>
+</html>
+
