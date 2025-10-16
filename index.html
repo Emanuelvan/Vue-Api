@@ -2,8 +2,8 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pokédex con Vue.js</title>
+    <meta name="viewport" content="width=device-width, initial-scale-1.0">
+    <title>Galería de Videojuegos con Vue.js</title>
     <!-- Tailwind CSS para un diseño moderno y responsivo -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Vue.js v2 -->
@@ -22,38 +22,15 @@
         }
         .card:hover {
             transform: translateY(-8px);
-            box-shadow: 0 10px 15px -3px rgba(251, 191, 36, 0.1), 0 4px 6px -2px rgba(251, 191, 36, 0.08);
+            box-shadow: 0 10px 15px -3px rgba(56, 189, 248, 0.1), 0 4px 6px -2px rgba(56, 189, 248, 0.08);
         }
-        .card-image-bg {
-            background-color: #4a5568;
+        .card-image {
+            height: 200px;
+            object-fit: cover;
         }
-        .type-badge {
-            padding: 0.25rem 0.75rem;
-            border-radius: 9999px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            color: white;
-            text-transform: capitalize;
+        .rating-star {
+            color: #facc15; /* yellow-400 */
         }
-        /* Colores para cada tipo de Pokémon */
-        .type-normal { background-color: #A8A77A; }
-        .type-fire { background-color: #EE8130; }
-        .type-water { background-color: #6390F0; }
-        .type-electric { background-color: #F7D02C; }
-        .type-grass { background-color: #7AC74C; }
-        .type-ice { background-color: #96D9D6; }
-        .type-fighting { background-color: #C22E28; }
-        .type-poison { background-color: #A33EA1; }
-        .type-ground { background-color: #E2BF65; }
-        .type-flying { background-color: #A98FF3; }
-        .type-psychic { background-color: #F95587; }
-        .type-bug { background-color: #A6B91A; }
-        .type-rock { background-color: #B6A136; }
-        .type-ghost { background-color: #735797; }
-        .type-dragon { background-color: #6F35FC; }
-        .type-dark { background-color: #705746; }
-        .type-steel { background-color: #B7B7CE; }
-        .type-fairy { background-color: #D685AD; }
     </style>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -64,36 +41,42 @@
     <div id="app" class="container mx-auto px-4 py-8">
         
         <header class="text-center mb-12">
-            <h1 class="text-4xl md:text-5xl font-bold text-yellow-400 mb-2">Mi Pokédex</h1>
-            <p class="text-lg text-gray-400">Descubriendo el mundo de Pokémon con Vue.js</p>
+            <h1 class="text-4xl md:text-5xl font-bold text-cyan-400 mb-2">Galería de Videojuegos</h1>
+            <p class="text-lg text-gray-400">Que jugar antes de morir</p>
         </header>
 
         <!-- Mensaje de carga mientras se obtienen los datos -->
-        <div v-if="loading" class="text-center">
-            <p class="text-2xl text-gray-400">Buscando Pokémon...</p>
+        <div v-if="loading" class="text-center py-10">
+            <p class="text-2xl text-gray-400">Cargando juegos...</p>
+        </div>
+        
+        <!-- Mensaje si no se ha introducido la API key -->
+        <div v-if="!apiKey && !loading" class="text-center mt-8 p-6 bg-yellow-900 text-yellow-200 rounded-lg max-w-2xl mx-auto">
+            <h3 class="font-bold text-xl mb-2">¡Atención! Se requiere una API Key</h3>
+            <p>Para mostrar los juegos, necesitas una API key gratuita de RAWG.io.</p>
+            <p class="mt-2">Por favor, edita el archivo <code class="bg-gray-700 p-1 rounded">index.html</code> en la sección de script y reemplaza <code class="bg-gray-700 p-1 rounded">'YOUR_API_KEY_HERE'</code> con tu clave.</p>
+            <a href="https://rawg.io/apikey" target="_blank" class="inline-block mt-4 bg-yellow-500 text-gray-900 font-bold py-2 px-4 rounded-lg hover:bg-yellow-600 transition">Obtener una API Key</a>
         </div>
 
-        <!-- Contenedor de la Pokédex -->
-        <main v-else class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+
+        <!-- Contenedor de la galería de juegos -->
+        <main v-else-if="!loading && !error" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
             
-            <!-- Tarjeta de Pokémon (se repite por cada Pokémon) -->
-            <div v-for="pokemon in pokemons" :key="pokemon.id" class="card rounded-lg overflow-hidden shadow-lg flex flex-col text-center">
-                <div class="card-image-bg p-4">
-                     <img :src="pokemon.sprites.front_default" :alt="'Imagen de ' + pokemon.name" class="w-32 h-32 mx-auto">
-                </div>
+            <!-- Tarjeta de Videojuego -->
+            <div v-for="game in games" :key="game.id" class="card rounded-lg overflow-hidden shadow-lg flex flex-col">
+                <img :src="game.background_image" :alt="'Imagen de ' + game.name" class="w-full card-image">
                 
-                <div class="p-5 flex-grow flex flex-col justify-between">
+                <div class="p-4 flex-grow flex flex-col justify-between">
                     <div>
-                        <p class="font-bold text-gray-400 mb-1">Nº {{ formatId(pokemon.id) }}</p>
-                        <h2 class="text-2xl font-bold mb-3 text-white">{{ capitalize(pokemon.name) }}</h2>
-                        
-                        <!-- Insignias de tipo -->
-                        <div class="flex justify-center gap-2">
-                             <span v-for="typeInfo in pokemon.types" :key="typeInfo.type.name"
-                                  class="type-badge" :class="'type-' + typeInfo.type.name">
-                                {{ typeInfo.type.name }}
-                            </span>
+                        <h2 class="text-xl font-bold mb-2 text-white">{{ game.name }}</h2>
+                        <p class="text-gray-400 text-sm mb-3">Lanzamiento: {{ game.released }}</p>
+                    </div>
+                    <div class="flex justify-between items-center text-sm">
+                        <div class="flex items-center">
+                            <span class="rating-star mr-1">★</span>
+                            <span class="font-bold text-gray-200">{{ game.rating }} / 5</span>
                         </div>
+                        <span class="text-gray-400">#{{ game.rating_top }} Top</span>
                     </div>
                 </div>
             </div>
@@ -101,68 +84,64 @@
         </main>
         
         <!-- Controles de paginación -->
-        <footer v-if="!loading && !error" class="flex justify-center items-center mt-12 gap-4">
-            <button @click="prevPage" :disabled="offset === 0" 
-                    class="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-2 px-4 rounded-lg transition disabled:bg-gray-600 disabled:cursor-not-allowed">
+        <footer v-if="!loading && !error && apiKey" class="flex justify-center items-center mt-12 gap-4">
+            <button @click="prevPage" :disabled="!prevPageUrl" 
+                    class="bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-2 px-4 rounded-lg transition disabled:bg-gray-600 disabled:cursor-not-allowed">
                 Anterior
             </button>
             <span class="text-lg text-gray-300 font-semibold">Página {{ currentPage }}</span>
-            <button @click="nextPage" :disabled="offset + limit >= totalPokemons"
-                    class="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-2 px-4 rounded-lg transition disabled:bg-gray-600 disabled:cursor-not-allowed">
+            <button @click="nextPage" :disabled="!nextPageUrl"
+                    class="bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-2 px-4 rounded-lg transition disabled:bg-gray-600 disabled:cursor-not-allowed">
                 Siguiente
             </button>
         </footer>
 
-
         <!-- Mensaje de error si la API falla -->
         <div v-if="error" class="text-center mt-8 p-4 bg-red-900 text-red-200 rounded-lg">
-            <p><strong>¡Oh, no!</strong> No se pudieron cargar los datos. Por favor, intenta de nuevo más tarde.</p>
+            <p><strong>¡Oh, no!</strong> No se pudieron cargar los datos. Revisa tu API key o intenta de nuevo más tarde.</p>
         </div>
-
     </div>
 
     <script>
-        // Instancia de Vue
         new Vue({
             el: '#app',
             data: {
-                pokemons: [],
+                games: [],
                 loading: true,
                 error: false,
-                limit: 20,          // Pokémon por página
-                offset: 0,          // Desplazamiento para la paginación
-                totalPokemons: 0    // Total de Pokémon en la API
-            },
-            computed: {
-                // Calcula el número de página actual basado en el offset
-                currentPage() {
-                    return Math.floor(this.offset / this.limit) + 1;
-                }
+                // --- IMPORTANTE ---
+                // Reemplaza 'YOUR_API_KEY_HERE' con tu API key de RAWG.io
+                apiKey: '6e2d7ca9de6c40028eea1cf141fe89fe', 
+                pageSize: 20,
+                currentPage: 1,
+                nextPageUrl: null,
+                prevPageUrl: null,
             },
             mounted() {
-                this.fetchPokemons();
+                // Solo intentar cargar si hay una API key
+                if (this.apiKey) {
+                    const initialUrl = `https://api.rawg.io/api/games?key=${this.apiKey}&page_size=${this.pageSize}`;
+                    this.fetchGames(initialUrl);
+                } else {
+                    this.loading = false;
+                }
             },
             methods: {
-                // Método principal para obtener los Pokémon
-                fetchPokemons() {
+                fetchGames(url) {
                     this.loading = true;
                     this.error = false;
                     
-                    // Se usan 'limit' y 'offset' para la paginación
-                    fetch(`https://pokeapi.co/api/v2/pokemon?limit=${this.limit}&offset=${this.offset}`)
-                        .then(response => response.json())
-                        .then(data => {
-                            this.totalPokemons = data.count; // Guardamos el total para deshabilitar el botón 'Siguiente'
-                            const detailPromises = data.results.map(pokemon => 
-                                fetch(pokemon.url).then(res => res.json())
-                            );
-                            
-                            return Promise.all(detailPromises);
+                    fetch(url)
+                        .then(response => {
+                             if (!response.ok) { throw new Error('Network response was not ok'); }
+                             return response.json();
                         })
-                        .then(pokemonDetails => {
-                            this.pokemons = pokemonDetails;
+                        .then(data => {
+                            this.games = data.results;
+                            this.nextPageUrl = data.next;
+                            this.prevPageUrl = data.previous;
                             this.loading = false;
-                            window.scrollTo(0, 0); // Vuelve al inicio de la página al cargar nuevos Pokémon
+                            window.scrollTo(0, 0);
                         })
                         .catch(error => {
                             console.error('Hubo un problema con la operación fetch:', error);
@@ -170,29 +149,17 @@
                             this.error = true;
                         });
                 },
-                // Navega a la siguiente página
                 nextPage() {
-                    if (this.offset + this.limit < this.totalPokemons) {
-                        this.offset += this.limit;
-                        this.fetchPokemons();
+                    if (this.nextPageUrl) {
+                        this.currentPage++;
+                        this.fetchGames(this.nextPageUrl);
                     }
                 },
-                // Navega a la página anterior
                 prevPage() {
-                    if (this.offset > 0) {
-                        this.offset -= this.limit;
-                        // Asegurarse de que el offset no sea negativo
-                        if (this.offset < 0) this.offset = 0;
-                        this.fetchPokemons();
+                    if (this.prevPageUrl) {
+                        this.currentPage--;
+                        this.fetchGames(this.prevPageUrl);
                     }
-                },
-                // Método para poner en mayúscula la primera letra
-                capitalize(name) {
-                    return name.charAt(0).toUpperCase() + name.slice(1);
-                },
-                // Método para formatear el ID del Pokémon (ej. 1 -> 001)
-                formatId(id) {
-                    return id.toString().padStart(3, '0');
                 }
             }
         });
